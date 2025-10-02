@@ -1,913 +1,1220 @@
-import React, { useState, useEffect, createContext, useContext } from 'react';
-import { Calculator, Download, DollarSign, User, LogOut, Save, History, Eye, Trash2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 
-const AuthContext = createContext();
+// Usuarios demo
+const DEMO_USERS = [
+  { email: 'admin@simulador.com', password: 'admin123' },
+  { email: 'usuario@demo.com', password: 'demo123' },
+  { email: 'test@test.com', password: 'test123' }
+];
 
-// Servicios simulados
-const mockAuthService = {
-  login: async (email, password) => {
-    const users = [
-      { id: 1, email: 'admin@simulador.com', password: 'admin123', name: 'Administrador' },
-      { id: 2, email: 'usuario@demo.com', password: 'demo123', name: 'Usuario Demo' },
-      { id: 3, email: 'test@test.com', password: 'test123', name: 'Usuario Test' }
-    ];
-    
-    const user = users.find(u => u.email === email && u.password === password);
-    if (user) {
-      return { success: true, user: { id: user.id, email: user.email, name: user.name } };
-    }
-    return { success: false, message: 'Credenciales inválidas' };
-  }
-};
+function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
 
-// Provider de autenticación
-const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  const login = async (email, password) => {
-    setLoading(true);
-    const result = await mockAuthService.login(email, password);
-    if (result.success) {
-      setUser(result.user);
-    }
-    setLoading(false);
-    return result;
-  };
-
-  const logout = async () => {
-    setUser(null);
-  };
-
-  return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
-      {children}
-    </AuthContext.Provider>
-  );
-};
-
-const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth debe usarse dentro de AuthProvider');
-  }
-  return context;
-};
-
-// Componente de Login
-const LoginForm = () => {
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
-  });
-  const [error, setError] = useState('');
-  const { login, loading } = useAuth();
-
-  const handleSubmit = async () => {
-    setError('');
-    const result = await login(formData.email, formData.password);
-    if (!result.success) {
-      setError(result.message);
-    }
-  };
-
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-  };
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
-            <div className="bg-indigo-100 p-3 rounded-full">
-              <Calculator className="h-8 w-8 text-indigo-600" />
-            </div>
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900">Simulador de Préstamos</h1>
-          <p className="text-gray-600 mt-2">Inicia sesión para continuar</p>
-        </div>
-
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              required
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              required
-            />
-          </div>
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">
-              {error}
-            </div>
-          )}
-
-          <button
-            onClick={handleSubmit}
-            disabled={loading}
-            className="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
-          >
-            {loading ? 'Procesando...' : 'Iniciar sesión'}
-          </button>
-        </div>
-
-        <div className="mt-6 p-4 bg-gray-50 rounded-md">
-          <p className="text-sm text-gray-600 mb-2">Cuentas demo:</p>
-          <div className="text-xs space-y-1">
-            <div>admin@simulador.com / admin123</div>
-            <div>usuario@demo.com / demo123</div>
-            <div>test@test.com / test123</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Componente principal del simulador
-const SimulatorApp = () => {
-  const { user, logout } = useAuth();
-  const [showGermanModal, setShowGermanModal] = useState(false);
-  const [showHistoryModal, setShowHistoryModal] = useState(false);
-  
   // Estados del formulario
-  const [clientData, setClientData] = useState({
-    name: '',
-    document: '',
-    phone: '',
-    email: '',
-    address: ''
-  });
+  const [clientName, setClientName] = useState('');
+  const [clientDoc, setClientDoc] = useState('');
+  const [clientAddress, setClientAddress] = useState('');
+  const [clientPhone, setClientPhone] = useState('');
+  const [clientEmail, setClientEmail] = useState('');
 
-  const [loanData, setLoanData] = useState({
-    amount: '',
-    periods: '',
-    rate: '',
-    currency: 'ARS',
-    system: 'french',
-    frequency: 'monthly',
-    liquidationDate: '',
-    firstPaymentDate: '',
-    gracePeriods: 0,
-    graceType: 'total',
-    ivaEnabled: false,
-    ivaRate: 10.5,
-    isGermanManual: false
-  });
+  const [capital, setCapital] = useState('');
+  const [periods, setPeriods] = useState('');
+  const [tna, setTna] = useState('');
+  const [system, setSystem] = useState('frances');
+  const [periodicity, setPeriodicity] = useState('mensual');
+  const [liquidationDate, setLiquidationDate] = useState('');
+  const [firstPaymentDate, setFirstPaymentDate] = useState('');
+  const [currency, setCurrency] = useState('ARS');
+  
+  const [isManual, setIsManual] = useState(false);
+  const [manualCapitals, setManualCapitals] = useState([]);
+  const [showManualModal, setShowManualModal] = useState(false);
+  
+  const [gracePeriods, setGracePeriods] = useState(0);
+  const [graceType, setGraceType] = useState('total');
+  
+  const [hasIVA, setHasIVA] = useState(false);
+  const [ivaRate, setIvaRate] = useState(21);
 
-  const [germanCapitals, setGermanCapitals] = useState([]);
   const [schedule, setSchedule] = useState([]);
-  const [errors, setErrors] = useState({});
+  const [summary, setSummary] = useState(null);
+  const [savedSimulations, setSavedSimulations] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
 
-  // Función para obtener símbolo de moneda
-  const getCurrencySymbol = (currency) => {
+  // Cargar simulaciones guardadas
+  useEffect(() => {
+    const saved = localStorage.getItem('savedSimulations');
+    if (saved) {
+      setSavedSimulations(JSON.parse(saved));
+    }
+  }, []);
+
+  // Símbolos de moneda
+  const getCurrencySymbol = (curr) => {
     const symbols = {
       'ARS': '$',
-      'USD': 'US$',
+      'USD': 'U$S',
       'EUR': '€',
       'SOJ': 'SOJ'
     };
-    return symbols[currency] || '$';
+    return symbols[curr] || '$';
   };
 
-  // Función para formatear números
+  // Función de login
+  const handleLogin = () => {
+    const user = DEMO_USERS.find(
+      u => u.email === loginEmail && u.password === loginPassword
+    );
+    if (user) {
+      setIsAuthenticated(true);
+    } else {
+      alert('Credenciales incorrectas');
+    }
+  };
+
+  // Función para calcular días entre fechas
+  const getDaysBetween = (date1, date2) => {
+    const d1 = new Date(date1);
+    const d2 = new Date(date2);
+    const diffTime = Math.abs(d2 - d1);
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
+
+  // Función para agregar días a una fecha
+  const addDays = (date, days) => {
+    const result = new Date(date);
+    result.setDate(result.getDate() + days);
+    return result;
+  };
+
+  // Función para agregar meses a una fecha
+  const addMonths = (date, months) => {
+    const result = new Date(date);
+    result.setMonth(result.getMonth() + months);
+    return result;
+  };
+
+  // Calcular días según periodicidad
+  const getDaysByPeriodicity = (periodicity) => {
+    const days = {
+      'mensual': 30,
+      'bimestral': 60,
+      'trimestral': 90,
+      'cuatrimestral': 120,
+      'semestral': 180,
+      'anual': 360
+    };
+    return days[periodicity] || 30;
+  };
+
+  // Formatear fecha para mostrar
+  const formatDate = (date) => {
+    const d = new Date(date);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  // Formatear número
   const formatNumber = (num) => {
-    if (isNaN(num) || num === null || num === undefined) return '0,00';
-    return Number(num).toLocaleString('es-AR', { 
-      minimumFractionDigits: 2, 
-      maximumFractionDigits: 2 
+    return num.toLocaleString('es-AR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
     });
   };
 
-  // Validación del formulario
-  const validateForm = () => {
-    const newErrors = {};
-
-    if (!clientData.name.trim()) newErrors.clientName = 'Nombre requerido';
-    if (!clientData.document.trim()) newErrors.clientDocument = 'Documento requerido';
-    if (!loanData.amount || loanData.amount <= 0) newErrors.amount = 'Capital debe ser mayor a 0';
-    if (!loanData.periods || loanData.periods <= 0) newErrors.periods = 'Períodos debe ser mayor a 0';
-    if (!loanData.rate || loanData.rate <= 0) newErrors.rate = 'TNA debe ser mayor a 0';
-    if (!loanData.liquidationDate) newErrors.liquidationDate = 'Fecha de liquidación requerida';
-    if (!loanData.firstPaymentDate) newErrors.firstPaymentDate = 'Fecha primera cuota requerida';
-
-    if (loanData.system === 'german' && loanData.isGermanManual) {
-      const totalCapitals = germanCapitals.reduce((sum, cap) => sum + (parseFloat(cap) || 0), 0);
-      const expectedTotal = parseFloat(loanData.amount);
-      if (Math.abs(totalCapitals - expectedTotal) > 0.01) {
-        newErrors.germanCapitals = 'La suma de capitales debe igual al monto del préstamo';
-      }
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  // Función para calcular cronograma
+  // Calcular cronograma
   const calculateSchedule = () => {
-    if (!validateForm()) return;
-
-    const capital = parseFloat(loanData.amount);
-    const periods = parseInt(loanData.periods);
-    const annualRate = parseFloat(loanData.rate) / 100;
-    const liquidationDate = new Date(loanData.liquidationDate);
-    const firstPaymentDate = new Date(loanData.firstPaymentDate);
-    
-    const gracePeriods = (loanData.system === 'german' && loanData.isGermanManual) ? 
-      parseInt(loanData.gracePeriods) || 0 : 0;
-    
-    // Calcular período según frecuencia
-    let periodsPerYear;
-    switch(loanData.frequency) {
-      case 'monthly': periodsPerYear = 12; break;
-      case 'quarterly': periodsPerYear = 4; break;
-      case 'semiannual': periodsPerYear = 2; break;
-      case 'annual': periodsPerYear = 1; break;
-      default: periodsPerYear = 12;
-    }
-    
-    const periodRate = annualRate / periodsPerYear;
-    let newSchedule = [];
-    
-    // Calcular días entre liquidación y primera cuota
-    const daysFirstPeriod = Math.ceil((firstPaymentDate.getTime() - liquidationDate.getTime()) / (24 * 60 * 60 * 1000));
-    
-    if (loanData.system === 'french') {
-      // Sistema Francés
-      const payment = capital * (periodRate * Math.pow(1 + periodRate, periods)) / 
-                     (Math.pow(1 + periodRate, periods) - 1);
-      
-      let balance = capital;
-      let currentDate = new Date(firstPaymentDate.getTime());
-      
-      for (let i = 1; i <= periods; i++) {
-        let interestPayment, principalPayment;
-        
-        if (i === 1) {
-          interestPayment = balance * (annualRate * daysFirstPeriod / 360);
-        } else {
-          interestPayment = balance * periodRate;
-        }
-        
-        principalPayment = payment - interestPayment;
-        if (principalPayment < 0) principalPayment = 0;
-        
-        const ivaAmount = loanData.ivaEnabled ? interestPayment * (loanData.ivaRate / 100) : 0;
-        const totalPayment = principalPayment + interestPayment + ivaAmount;
-        
-        newSchedule.push({
-          period: i,
-          date: new Date(currentDate.getTime()),
-          days: i === 1 ? daysFirstPeriod : Math.round(360 / periodsPerYear),
-          principalPayment: principalPayment,
-          interestPayment: interestPayment,
-          ivaAmount: ivaAmount,
-          totalPayment: totalPayment,
-          balance: balance - principalPayment
-        });
-        
-        balance -= principalPayment;
-        
-        if (loanData.frequency === 'monthly') {
-          currentDate.setMonth(currentDate.getMonth() + 1);
-        } else if (loanData.frequency === 'quarterly') {
-          currentDate.setMonth(currentDate.getMonth() + 3);
-        } else if (loanData.frequency === 'semiannual') {
-          currentDate.setMonth(currentDate.getMonth() + 6);
-        } else if (loanData.frequency === 'annual') {
-          currentDate.setFullYear(currentDate.getFullYear() + 1);
-        }
-      }
-    } else if (loanData.system === 'german') {
-      // Sistema Alemán
-      let balance = capital;
-      let currentDate = new Date(firstPaymentDate.getTime());
-      
-      for (let i = 1; i <= periods; i++) {
-        let principalPayment;
-        
-        if (loanData.isGermanManual && germanCapitals.length > 0) {
-          principalPayment = parseFloat(germanCapitals[i - 1]) || 0;
-        } else {
-          principalPayment = capital / periods;
-        }
-        
-        let interestPayment;
-        if (i === 1) {
-          interestPayment = balance * (annualRate * daysFirstPeriod / 360);
-        } else {
-          interestPayment = balance * periodRate;
-        }
-        
-        if (loanData.isGermanManual && i <= gracePeriods && loanData.graceType === 'total') {
-          interestPayment = 0;
-        }
-        
-        const ivaAmount = loanData.ivaEnabled ? interestPayment * (loanData.ivaRate / 100) : 0;
-        const totalPayment = principalPayment + interestPayment + ivaAmount;
-        
-        newSchedule.push({
-          period: i,
-          date: new Date(currentDate.getTime()),
-          days: i === 1 ? daysFirstPeriod : Math.round(360 / periodsPerYear),
-          principalPayment: principalPayment,
-          interestPayment: interestPayment,
-          ivaAmount: ivaAmount,
-          totalPayment: totalPayment,
-          balance: balance - principalPayment
-        });
-        
-        balance -= principalPayment;
-        
-        if (loanData.frequency === 'monthly') {
-          currentDate.setMonth(currentDate.getMonth() + 1);
-        } else if (loanData.frequency === 'quarterly') {
-          currentDate.setMonth(currentDate.getMonth() + 3);
-        } else if (loanData.frequency === 'semiannual') {
-          currentDate.setMonth(currentDate.getMonth() + 6);
-        } else if (loanData.frequency === 'annual') {
-          currentDate.setFullYear(currentDate.getFullYear() + 1);
-        }
-      }
-    } else if (loanData.system === 'american') {
-      // Sistema Americano
-      let currentDate = new Date(firstPaymentDate.getTime());
-      
-      for (let i = 1; i <= periods; i++) {
-        let principalPayment = (i === periods) ? capital : 0;
-        let interestPayment;
-        
-        if (i === 1) {
-          interestPayment = capital * (annualRate * daysFirstPeriod / 360);
-        } else {
-          interestPayment = capital * periodRate;
-        }
-        
-        const ivaAmount = loanData.ivaEnabled ? interestPayment * (loanData.ivaRate / 100) : 0;
-        const totalPayment = principalPayment + interestPayment + ivaAmount;
-        
-        newSchedule.push({
-          period: i,
-          date: new Date(currentDate.getTime()),
-          days: i === 1 ? daysFirstPeriod : Math.round(360 / periodsPerYear),
-          principalPayment: principalPayment,
-          interestPayment: interestPayment,
-          ivaAmount: ivaAmount,
-          totalPayment: totalPayment,
-          balance: i === periods ? 0 : capital
-        });
-        
-        if (loanData.frequency === 'monthly') {
-          currentDate.setMonth(currentDate.getMonth() + 1);
-        } else if (loanData.frequency === 'quarterly') {
-          currentDate.setMonth(currentDate.getMonth() + 3);
-        } else if (loanData.frequency === 'semiannual') {
-          currentDate.setMonth(currentDate.getMonth() + 6);
-        } else if (loanData.frequency === 'annual') {
-          currentDate.setFullYear(currentDate.getFullYear() + 1);
-        }
-      }
-    }
-    
-    setSchedule(newSchedule);
-  };
-
-  // Funciones simplificadas
-  const clearData = () => {
-    if (window.confirm('¿Limpiar todos los datos?')) {
-      setClientData({ name: '', document: '', phone: '', email: '', address: '' });
-      setLoanData({
-        amount: '', periods: '', rate: '', currency: 'ARS', system: 'french',
-        frequency: 'monthly', liquidationDate: '', firstPaymentDate: '',
-        gracePeriods: 0, graceType: 'total', ivaEnabled: false, ivaRate: 10.5, isGermanManual: false
-      });
-      setGermanCapitals([]);
-      setSchedule([]);
-      setErrors({});
-      alert('Datos limpiados correctamente');
-    }
-  };
-
-  const saveSimulation = () => {
-    if (schedule.length === 0) {
-      alert('Calcule el cronograma antes de guardar');
+    if (!capital || !periods || !tna || !liquidationDate) {
+      alert('Complete todos los campos obligatorios');
       return;
     }
-    const name = window.prompt('Nombre de la simulación:');
-    if (!name) return;
-    
-    const simulation = { name, clientData, loanData, germanCapitals, schedule, timestamp: new Date().toISOString() };
-    const saved = localStorage.getItem('savedSimulations');
-    const simulations = saved ? JSON.parse(saved) : [];
-    simulations.push(simulation);
-    localStorage.setItem('savedSimulations', JSON.stringify(simulations));
-    alert('Simulación guardada correctamente');
+
+    const cap = parseFloat(capital);
+    const per = parseInt(periods);
+    const rate = parseFloat(tna) / 100;
+    const monthlyRate = rate / 12;
+
+    let currentSchedule = [];
+    let balance = cap;
+
+    // Sistema Francés: Calcular primera fecha automáticamente
+    let currentDate;
+    if (system === 'frances') {
+      const daysToAdd = getDaysByPeriodicity(periodicity);
+      currentDate = addDays(new Date(liquidationDate), daysToAdd);
+    } else {
+      // Alemán y Americano: usar fecha manual
+      if (!firstPaymentDate) {
+        alert('Complete la fecha de primera cuota');
+        return;
+      }
+      currentDate = new Date(firstPaymentDate);
+    }
+
+    let previousDate = new Date(liquidationDate);
+
+    if (system === 'frances') {
+      // Sistema Francés
+      const periodsWithoutGrace = per;
+      const quota = (cap * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -periodsWithoutGrace));
+
+      for (let i = 1; i <= per; i++) {
+        const days = getDaysBetween(previousDate, currentDate);
+        const interest = balance * (rate / 360) * days;
+        let capitalPayment = quota - interest;
+        let ivaAmount = 0;
+
+        if (hasIVA) {
+          ivaAmount = interest * (ivaRate / 100);
+        }
+
+        const totalPayment = quota + ivaAmount;
+        balance = balance - capitalPayment;
+
+        currentSchedule.push({
+          period: i,
+          date: formatDate(currentDate),
+          days: days,
+          capital: capitalPayment,
+          interest: interest,
+          iva: ivaAmount,
+          total: totalPayment,
+          balance: balance > 0 ? balance : 0
+        });
+
+        previousDate = new Date(currentDate);
+        const daysToAdd = getDaysByPeriodicity(periodicity);
+        currentDate = addDays(currentDate, daysToAdd);
+      }
+    } else if (system === 'aleman') {
+      // Sistema Alemán
+      if (isManual && manualCapitals.length > 0) {
+        // Manual
+        for (let i = 1; i <= per; i++) {
+          const days = getDaysBetween(previousDate, currentDate);
+          const interest = balance * (rate / 360) * days;
+          const capitalPayment = manualCapitals[i - 1] || 0;
+          let ivaAmount = 0;
+
+          if (hasIVA) {
+            ivaAmount = interest * (ivaRate / 100);
+          }
+
+          const totalPayment = capitalPayment + interest + ivaAmount;
+          balance = balance - capitalPayment;
+
+          const isGracePeriod = i <= gracePeriods;
+
+          currentSchedule.push({
+            period: i,
+            date: formatDate(currentDate),
+            days: days,
+            capital: capitalPayment,
+            interest: interest,
+            iva: ivaAmount,
+            total: totalPayment,
+            balance: balance > 0 ? balance : 0,
+            isGrace: isGracePeriod
+          });
+
+          previousDate = new Date(currentDate);
+          const daysToAdd = getDaysByPeriodicity(periodicity);
+          currentDate = addDays(currentDate, daysToAdd);
+        }
+      } else {
+        // Automático
+        const capitalPayment = cap / per;
+
+        for (let i = 1; i <= per; i++) {
+          const days = getDaysBetween(previousDate, currentDate);
+          const interest = balance * (rate / 360) * days;
+          let ivaAmount = 0;
+
+          if (hasIVA) {
+            ivaAmount = interest * (ivaRate / 100);
+          }
+
+          const totalPayment = capitalPayment + interest + ivaAmount;
+          balance = balance - capitalPayment;
+
+          currentSchedule.push({
+            period: i,
+            date: formatDate(currentDate),
+            days: days,
+            capital: capitalPayment,
+            interest: interest,
+            iva: ivaAmount,
+            total: totalPayment,
+            balance: balance > 0 ? balance : 0
+          });
+
+          previousDate = new Date(currentDate);
+          const daysToAdd = getDaysByPeriodicity(periodicity);
+          currentDate = addDays(currentDate, daysToAdd);
+        }
+      }
+    } else if (system === 'americano') {
+      // Sistema Americano
+      for (let i = 1; i <= per; i++) {
+        const days = getDaysBetween(previousDate, currentDate);
+        const interest = balance * (rate / 360) * days;
+        const capitalPayment = i === per ? balance : 0;
+        let ivaAmount = 0;
+
+        if (hasIVA) {
+          ivaAmount = interest * (ivaRate / 100);
+        }
+
+        const totalPayment = capitalPayment + interest + ivaAmount;
+        balance = balance - capitalPayment;
+
+        currentSchedule.push({
+          period: i,
+          date: formatDate(currentDate),
+          days: days,
+          capital: capitalPayment,
+          interest: interest,
+          iva: ivaAmount,
+          total: totalPayment,
+          balance: balance > 0 ? balance : 0
+        });
+
+        previousDate = new Date(currentDate);
+        const daysToAdd = getDaysByPeriodicity(periodicity);
+        currentDate = addDays(currentDate, daysToAdd);
+      }
+    }
+
+    setSchedule(currentSchedule);
+
+    // Calcular resumen
+    const totalCapital = currentSchedule.reduce((sum, item) => sum + item.capital, 0);
+    const totalInterest = currentSchedule.reduce((sum, item) => sum + item.interest, 0);
+    const totalIVA = currentSchedule.reduce((sum, item) => sum + item.iva, 0);
+    const totalAmount = currentSchedule.reduce((sum, item) => sum + item.total, 0);
+
+    setSummary({
+      totalCapital,
+      totalInterest,
+      totalIVA,
+      totalAmount
+    });
   };
 
+  // Modal para sistema Alemán Manual
+  const openManualModal = () => {
+    const per = parseInt(periods);
+    if (!per) {
+      alert('Ingrese la cantidad de períodos primero');
+      return;
+    }
+    const caps = Array(per).fill(0);
+    setManualCapitals(caps);
+    setShowManualModal(true);
+  };
+
+  const distributeEvenly = () => {
+    const cap = parseFloat(capital);
+    const per = parseInt(periods);
+    const effectivePeriods = per - gracePeriods;
+    
+    if (!cap || !per) return;
+    
+    const perCapital = cap / effectivePeriods;
+    const newCaps = manualCapitals.map((_, index) => {
+      if (index < gracePeriods) {
+        return 0;
+      }
+      return perCapital;
+    });
+    setManualCapitals(newCaps);
+  };
+
+  const updateManualCapital = (index, value) => {
+    const newCaps = [...manualCapitals];
+    newCaps[index] = parseFloat(value) || 0;
+    setManualCapitals(newCaps);
+  };
+
+  const saveManualCapitals = () => {
+    const total = manualCapitals.reduce((sum, val) => sum + val, 0);
+    const cap = parseFloat(capital);
+    if (Math.abs(total - cap) > 0.01) {
+      alert(`La suma de capitales (${total.toFixed(2)}) debe ser igual al capital total (${cap.toFixed(2)})`);
+      return;
+    }
+    setShowManualModal(false);
+  };
+
+  // Exportar a CSV
   const exportToCSV = () => {
     if (schedule.length === 0) {
       alert('Calcule el cronograma antes de exportar');
       return;
     }
 
-    const currencySymbol = getCurrencySymbol(loanData.currency);
-    let csvContent = 'CRONOGRAMA DE PAGOS\n\n';
+    let csv = 'CRONOGRAMA DE PAGOS\n\n';
     
-    if (clientData.name) csvContent += `Nombre;${clientData.name}\n`;
-    if (clientData.document) csvContent += `Documento;${clientData.document}\n`;
-    if (clientData.phone) csvContent += `Telefono;${clientData.phone}\n`;
-    if (clientData.email) csvContent += `Email;${clientData.email}\n`;
-    if (clientData.address) csvContent += `Direccion;${clientData.address}\n`;
-    
-    csvContent += '\nPARAMETROS DEL PRESTAMO\n';
-    csvContent += `Capital;${currencySymbol}${loanData.amount}\n`;
-    csvContent += `TNA;${loanData.rate}%\n`;
-    csvContent += `Plazo;${loanData.periods} periodos\n`;
-    csvContent += `Sistema;${loanData.system === 'french' ? 'Frances' : loanData.system === 'german' ? 'Aleman' : 'Americano'}\n`;
-    csvContent += `Periodicidad;${loanData.frequency === 'monthly' ? 'Mensual' : loanData.frequency === 'quarterly' ? 'Trimestral' : loanData.frequency === 'semiannual' ? 'Semestral' : 'Anual'}\n`;
-    csvContent += `Moneda;${loanData.currency}\n\n`;
-    csvContent += 'CRONOGRAMA DE PAGOS\n';
-    csvContent += 'Cuota;Vencimiento;Dias;Capital;Interes';
-    if (loanData.ivaEnabled) csvContent += ';IVA';
-    csvContent += ';Cuota Total;Saldo\n';
-    
+    csv += 'DATOS DEL CLIENTE\n';
+    if (clientName) csv += `Nombre y Apellido / Razón Social;${clientName}\n`;
+    if (clientDoc) csv += `Documento / CUIT;${clientDoc}\n`;
+    if (clientAddress) csv += `Domicilio;${clientAddress}\n`;
+    if (clientPhone) csv += `Teléfono;${clientPhone}\n`;
+    if (clientEmail) csv += `Email;${clientEmail}\n`;
+    csv += '\n';
+
+    csv += 'PARÁMETROS DEL PRÉSTAMO\n';
+    csv += `Capital;${getCurrencySymbol(currency)}${formatNumber(parseFloat(capital))}\n`;
+    csv += `Cantidad de Períodos;${periods}\n`;
+    csv += `TNA;${tna}%\n`;
+    csv += `Sistema;${system.charAt(0).toUpperCase() + system.slice(1)}\n`;
+    csv += `Periodicidad;${periodicity.charAt(0).toUpperCase() + periodicity.slice(1)}\n`;
+    csv += `Fecha de Liquidación;${formatDate(liquidationDate)}\n`;
+    if (system !== 'frances') {
+      csv += `Fecha Primera Cuota;${formatDate(firstPaymentDate)}\n`;
+    }
+    csv += `Moneda;${currency}\n`;
+    if (hasIVA) csv += `IVA;${ivaRate}%\n`;
+    csv += '\n';
+
+    csv += 'CRONOGRAMA DE PAGOS\n';
+    csv += 'Cuota;Vencimiento;Días;Capital;Interés';
+    if (hasIVA) csv += ';IVA';
+    csv += ';Cuota Total;Saldo\n';
+
     schedule.forEach(row => {
-      csvContent += `${row.period};${row.date.toLocaleDateString('es-AR')};${row.days};${row.principalPayment.toFixed(2)};${row.interestPayment.toFixed(2)}`;
-      if (loanData.ivaEnabled) csvContent += `;${row.ivaAmount.toFixed(2)}`;
-      csvContent += `;${row.totalPayment.toFixed(2)};${row.balance.toFixed(2)}\n`;
+      csv += `${row.period};${row.date};${row.days};${row.capital.toFixed(2)};${row.interest.toFixed(2)}`;
+      if (hasIVA) csv += `;${row.iva.toFixed(2)}`;
+      csv += `;${row.total.toFixed(2)};${row.balance.toFixed(2)}\n`;
     });
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
-    link.href = url;
-    link.download = `cronograma-${clientData.name || 'simulacion'}.csv`;
+    link.href = URL.createObjectURL(blob);
+    link.download = `cronograma_${clientName || 'simulacion'}_${new Date().getTime()}.csv`;
     link.click();
-    URL.revokeObjectURL(url);
-    alert('Archivo CSV exportado correctamente');
   };
 
-  // Modal alemán manual simplificado
-  const GermanManualModal = () => {
-    const [localCapitals, setLocalCapitals] = useState([...germanCapitals]);
-    
-    useEffect(() => {
-      if (showGermanModal && loanData.periods) {
-        const periods = parseInt(loanData.periods);
-        const capitals = new Array(periods).fill('').map((_, index) => 
-          germanCapitals[index] || ''
-        );
-        setLocalCapitals(capitals);
+  // Exportar a PDF
+  const exportToPDF = async () => {
+    if (schedule.length === 0) {
+      alert('Calcule el cronograma antes de exportar');
+      return;
+    }
+
+    // Importar jsPDF dinámicamente
+    const { jsPDF } = await import('jspdf');
+    await import('jspdf-autotable');
+
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.width;
+    let yPos = 20;
+
+    // Título principal
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('CRONOGRAMA DE PAGOS', pageWidth / 2, yPos, { align: 'center' });
+    yPos += 10;
+
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Simulador de Préstamos', pageWidth / 2, yPos, { align: 'center' });
+    yPos += 15;
+
+    // Datos del cliente
+    if (clientName || clientDoc || clientAddress || clientPhone || clientEmail) {
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('DATOS DEL CLIENTE', 14, yPos);
+      yPos += 7;
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      if (clientName) {
+        doc.text(`Nombre y Apellido / Razón Social: ${clientName}`, 14, yPos);
+        yPos += 5;
       }
-    }, [showGermanModal]);
-    
-    const handleDistributeEqual = () => {
-      const amount = parseFloat(loanData.amount) || 0;
-      const periods = parseInt(loanData.periods) || 1;
-      const equalAmount = (amount / periods).toFixed(2);
-      setLocalCapitals(new Array(periods).fill(equalAmount));
+      if (clientDoc) {
+        doc.text(`Documento / CUIT: ${clientDoc}`, 14, yPos);
+        yPos += 5;
+      }
+      if (clientAddress) {
+        doc.text(`Domicilio: ${clientAddress}`, 14, yPos);
+        yPos += 5;
+      }
+      if (clientPhone) {
+        doc.text(`Teléfono: ${clientPhone}`, 14, yPos);
+        yPos += 5;
+      }
+      if (clientEmail) {
+        doc.text(`Email: ${clientEmail}`, 14, yPos);
+        yPos += 5;
+      }
+      yPos += 5;
+    }
+
+    // Parámetros del préstamo
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('RESUMEN DEL PRÉSTAMO', 14, yPos);
+    yPos += 7;
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Capital: ${getCurrencySymbol(currency)} ${formatNumber(parseFloat(capital))}`, 14, yPos);
+    yPos += 5;
+    doc.text(`Cantidad de Períodos: ${periods}`, 14, yPos);
+    yPos += 5;
+    doc.text(`TNA: ${tna}%`, 14, yPos);
+    yPos += 5;
+    doc.text(`Sistema: ${system.charAt(0).toUpperCase() + system.slice(1)}`, 14, yPos);
+    yPos += 5;
+    doc.text(`Periodicidad: ${periodicity.charAt(0).toUpperCase() + periodicity.slice(1)}`, 14, yPos);
+    yPos += 5;
+    doc.text(`Fecha de Liquidación: ${formatDate(liquidationDate)}`, 14, yPos);
+    yPos += 5;
+    if (system !== 'frances') {
+      doc.text(`Fecha Primera Cuota: ${formatDate(firstPaymentDate)}`, 14, yPos);
+      yPos += 5;
+    }
+    doc.text(`Moneda: ${currency}`, 14, yPos);
+    yPos += 5;
+    if (hasIVA) {
+      doc.text(`IVA: ${ivaRate}%`, 14, yPos);
+      yPos += 5;
+    }
+    yPos += 5;
+
+    // Tabla del cronograma
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('CRONOGRAMA DE PAGOS', 14, yPos);
+    yPos += 5;
+
+    const headers = hasIVA 
+      ? [['Cuota', 'Vencimiento', 'Días', 'Capital', 'Interés', 'IVA', 'Total', 'Saldo']]
+      : [['Cuota', 'Vencimiento', 'Días', 'Capital', 'Interés', 'Total', 'Saldo']];
+
+    const data = schedule.map(row => {
+      const baseRow = [
+        row.period,
+        row.date,
+        row.days,
+        formatNumber(row.capital),
+        formatNumber(row.interest)
+      ];
+      
+      if (hasIVA) {
+        baseRow.push(formatNumber(row.iva));
+      }
+      
+      baseRow.push(
+        formatNumber(row.total),
+        formatNumber(row.balance)
+      );
+      
+      return baseRow;
+    });
+
+    doc.autoTable({
+      startY: yPos,
+      head: headers,
+      body: data,
+      theme: 'striped',
+      headStyles: {
+        fillColor: [41, 128, 185],
+        textColor: 255,
+        fontStyle: 'bold'
+      },
+      styles: {
+        fontSize: 8,
+        cellPadding: 2
+      },
+      columnStyles: {
+        0: { halign: 'center' },
+        1: { halign: 'center' },
+        2: { halign: 'center' },
+        3: { halign: 'right' },
+        4: { halign: 'right' },
+        5: { halign: 'right' },
+        6: { halign: 'right' },
+        7: { halign: 'right' }
+      }
+    });
+
+    // Pie de página
+    const finalY = doc.lastAutoTable.finalY + 10;
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'italic');
+    doc.text(`Generado el: ${new Date().toLocaleString('es-AR')}`, pageWidth / 2, finalY, { align: 'center' });
+
+    // Guardar PDF
+    doc.save(`cronograma_${clientName || 'simulacion'}_${new Date().getTime()}.pdf`);
+  };
+
+  // Guardar simulación
+  const saveSimulation = () => {
+    if (schedule.length === 0) {
+      alert('Calcule el cronograma antes de guardar');
+      return;
+    }
+
+    const name = window.prompt('Nombre de la simulación:');
+    if (!name) return;
+
+    const simulation = {
+      id: Date.now(),
+      name,
+      date: new Date().toISOString(),
+      clientName,
+      clientDoc,
+      capital,
+      periods,
+      tna,
+      system,
+      currency,
+      schedule,
+      summary
     };
-    
-    const handleSave = () => {
-      setGermanCapitals([...localCapitals]);
-      setShowGermanModal(false);
-    };
-    
-    const totalCapitals = localCapitals.reduce((sum, cap) => sum + (parseFloat(cap) || 0), 0);
-    const expectedTotal = parseFloat(loanData.amount) || 0;
-    
-    if (!showGermanModal) return null;
-    
+
+    const updated = [...savedSimulations, simulation];
+    setSavedSimulations(updated);
+    localStorage.setItem('savedSimulations', JSON.stringify(updated));
+    alert('Simulación guardada correctamente');
+  };
+
+  // Cargar simulación
+  const loadSimulation = (simulation) => {
+    setClientName(simulation.clientName || '');
+    setClientDoc(simulation.clientDoc || '');
+    setCapital(simulation.capital || '');
+    setPeriods(simulation.periods || '');
+    setTna(simulation.tna || '');
+    setSystem(simulation.system || 'frances');
+    setCurrency(simulation.currency || 'ARS');
+    setSchedule(simulation.schedule || []);
+    setSummary(simulation.summary || null);
+    setShowHistory(false);
+  };
+
+  // Eliminar simulación
+  const deleteSimulation = (id) => {
+    if (window.confirm('¿Eliminar esta simulación?')) {
+      const updated = savedSimulations.filter(s => s.id !== id);
+      setSavedSimulations(updated);
+      localStorage.setItem('savedSimulations', JSON.stringify(updated));
+    }
+  };
+
+  // Limpiar datos
+  const clearData = () => {
+    if (window.confirm('¿Limpiar todos los datos del formulario?')) {
+      setClientName('');
+      setClientDoc('');
+      setClientAddress('');
+      setClientPhone('');
+      setClientEmail('');
+      setCapital('');
+      setPeriods('');
+      setTna('');
+      setSystem('frances');
+      setPeriodicity('mensual');
+      setLiquidationDate('');
+      setFirstPaymentDate('');
+      setCurrency('ARS');
+      setIsManual(false);
+      setManualCapitals([]);
+      setGracePeriods(0);
+      setGraceType('total');
+      setHasIVA(false);
+      setIvaRate(21);
+      setSchedule([]);
+      setSummary(null);
+      alert('Datos limpiados correctamente');
+    }
+  };
+
+  // Pantalla de login
+  if (!isAuthenticated) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
-          <div className="p-6 border-b border-gray-200">
-            <h3 className="text-xl font-semibold">Configurar Capitales por Cuota</h3>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-md">
+          <div className="text-center mb-8">
+            <div className="text-5xl mb-4">🧮</div>
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">Simulador de Préstamos</h1>
+            <p className="text-gray-600">Inicia sesión para continuar</p>
+          </div>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+              <input
+                type="email"
+                value={loginEmail}
+                onChange={(e) => setLoginEmail(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="email@ejemplo.com"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Contraseña</label>
+              <input
+                type="password"
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="••••••••"
+              />
+            </div>
+            
             <button
-              onClick={handleDistributeEqual}
-              className="mt-2 px-3 py-1 bg-blue-100 text-blue-800 rounded text-sm hover:bg-blue-200"
+              onClick={handleLogin}
+              className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium"
             >
-              Distribuir Parejo
+              Iniciar sesión
             </button>
           </div>
           
-          <div className="p-6 max-h-96 overflow-y-auto">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {localCapitals.map((capital, index) => (
-                <div key={index}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Cuota {index + 1}
-                  </label>
-                  <input
-                    type="number"
-                    value={capital}
-                    onChange={(e) => {
-                      const newCapitals = [...localCapitals];
-                      newCapitals[index] = e.target.value;
-                      setLocalCapitals(newCapitals);
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    step="0.01"
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-          
-          <div className="p-6 border-t border-gray-200 bg-gray-50">
-            <div className="mb-4 text-sm">
-              <div>Total: {getCurrencySymbol(loanData.currency)}{formatNumber(totalCapitals)}</div>
-              <div>Esperado: {getCurrencySymbol(loanData.currency)}{formatNumber(expectedTotal)}</div>
-            </div>
-            <div className="flex justify-end gap-3">
-              <button onClick={() => setShowGermanModal(false)} className="px-4 py-2 text-gray-600 bg-gray-200 rounded-md">
-                Cancelar
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={Math.abs(totalCapitals - expectedTotal) > 0.01}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-              >
-                Guardar
-              </button>
-            </div>
+          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+            <p className="text-sm text-gray-600 mb-2">Cuentas demo:</p>
+            <p className="text-xs text-gray-500">admin@simulador.com / admin123</p>
+            <p className="text-xs text-gray-500">usuario@demo.com / demo123</p>
+            <p className="text-xs text-gray-500">test@test.com / test123</p>
           </div>
         </div>
       </div>
     );
-  };
+  }
 
+  // Pantalla principal
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center">
-              <Calculator className="h-8 w-8 text-indigo-600 mr-3" />
-              <h1 className="text-2xl font-bold text-gray-900">Simulador de Préstamos</h1>
+    <div className="min-h-screen bg-gray-50 p-4">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800">🧮 Simulador de Préstamos</h1>
+              <p className="text-gray-600">Sistema profesional de cálculo financiero</p>
             </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">
-                <User className="h-4 w-4 inline mr-1" />
-                {user.name}
-              </span>
-              <button onClick={logout} className="text-sm text-gray-500 hover:text-gray-700">
-                <LogOut className="h-4 w-4 inline mr-1" />
-                Salir
-              </button>
-            </div>
+            <button
+              onClick={() => setIsAuthenticated(false)}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            >
+              Cerrar sesión
+            </button>
           </div>
         </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold mb-6">Configuración</h2>
-              
-              {/* Datos del Cliente */}
-              <div className="mb-6">
-                <h3 className="text-md font-medium text-gray-900 mb-4">Datos del Cliente</h3>
-                <div className="space-y-4">
-                  {['name', 'document', 'phone', 'email', 'address'].map((field) => (
-                    <div key={field}>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {field === 'name' ? 'Nombre *' : 
-                         field === 'document' ? 'Documento *' :
-                         field === 'phone' ? 'Teléfono' :
-                         field === 'email' ? 'Email' : 'Dirección'}
-                      </label>
-                      <input
-                        type={field === 'email' ? 'email' : 'text'}
-                        value={clientData[field]}
-                        onChange={(e) => setClientData({...clientData, [field]: e.target.value})}
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                          (field === 'name' && errors.clientName) || (field === 'document' && errors.clientDocument) ? 'border-red-300' : 'border-gray-300'
-                        }`}
-                      />
-                      {field === 'name' && errors.clientName && <p className="text-red-500 text-xs mt-1">{errors.clientName}</p>}
-                      {field === 'document' && errors.clientDocument && <p className="text-red-500 text-xs mt-1">{errors.clientDocument}</p>}
-                    </div>
-                  ))}
-                </div>
+        {/* Formulario */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          {/* Datos del Cliente */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">📋 Datos del Cliente</h2>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nombre y Apellido / Razón Social
+                </label>
+                <input
+                  type="text"
+                  value={clientName}
+                  onChange={(e) => setClientName(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="Juan Pérez / Empresa S.A."
+                />
               </div>
 
-              {/* Parámetros del Préstamo */}
-              <div className="mb-6">
-                <h3 className="text-md font-medium text-gray-900 mb-4">Parámetros del Préstamo</h3>
-                <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Documento / CUIT
+                </label>
+                <input
+                  type="text"
+                  value={clientDoc}
+                  onChange={(e) => setClientDoc(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="12345678 / 20-12345678-9"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Domicilio</label>
+                <input
+                  type="text"
+                  value={clientAddress}
+                  onChange={(e) => setClientAddress(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="Calle 123, Ciudad"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Teléfono</label>
+                <input
+                  type="text"
+                  value={clientPhone}
+                  onChange={(e) => setClientPhone(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="+54 9 11 1234-5678"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                <input
+                  type="email"
+                  value={clientEmail}
+                  onChange={(e) => setClientEmail(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="cliente@email.com"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Parámetros del Préstamo */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">💰 Parámetros del Préstamo</h2>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Capital *</label>
+                <input
+                  type="number"
+                  value={capital}
+                  onChange={(e) => setCapital(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="100000"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Cantidad de Períodos *</label>
+                <input
+                  type="number"
+                  value={periods}
+                  onChange={(e) => setPeriods(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="12"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">TNA (%) *</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={tna}
+                  onChange={(e) => setTna(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="36"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Sistema de Amortización *</label>
+                <select
+                  value={system}
+                  onChange={(e) => {
+                    setSystem(e.target.value);
+                    setIsManual(false);
+                    setGracePeriods(0);
+                  }}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="frances">Francés</option>
+                  <option value="aleman">Alemán</option>
+                  <option value="americano">Americano</option>
+                </select>
+              </div>
+
+              {system === 'aleman' && (
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={isManual}
+                    onChange={(e) => {
+                      setIsManual(e.target.checked);
+                      if (!e.target.checked) setGracePeriods(0);
+                    }}
+                    className="w-4 h-4"
+                  />
+                  <label className="text-sm font-medium text-gray-700">Sistema Manual</label>
+                </div>
+              )}
+
+              {system === 'aleman' && isManual && (
+                <button
+                  onClick={openManualModal}
+                  className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                >
+                  Configurar Capitales Manualmente
+                </button>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Periodicidad</label>
+                <select
+                  value={periodicity}
+                  onChange={(e) => setPeriodicity(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="mensual">Mensual</option>
+                  <option value="bimestral">Bimestral</option>
+                  <option value="trimestral">Trimestral</option>
+                  <option value="cuatrimestral">Cuatrimestral</option>
+                  <option value="semestral">Semestral</option>
+                  <option value="anual">Anual</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Fecha de Liquidación *</label>
+                <input
+                  type="date"
+                  value={liquidationDate}
+                  onChange={(e) => setLiquidationDate(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {system !== 'frances' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Fecha Primera Cuota *</label>
+                  <input
+                    type="date"
+                    value={firstPaymentDate}
+                    onChange={(e) => setFirstPaymentDate(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              )}
+
+              {system === 'frances' && liquidationDate && (
+                <div className="p-3 bg-blue-50 rounded-lg">
+                  <p className="text-sm text-blue-700">
+                    ℹ️ Primera cuota: {formatDate(addDays(new Date(liquidationDate), getDaysByPeriodicity(periodicity)))}
+                  </p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    Días del primer período: {getDaysByPeriodicity(periodicity)} días
+                  </p>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Moneda</label>
+                <select
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="ARS">Peso Argentino (ARS)</option>
+                  <option value="USD">Dólar (USD)</option>
+                  <option value="EUR">Euro (EUR)</option>
+                  <option value="SOJ">Soja (SOJ)</option>
+                </select>
+              </div>
+
+              {system === 'aleman' && isManual && (
+                <>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Moneda</label>
-                    <select
-                      value={loanData.currency}
-                      onChange={(e) => setLoanData({...loanData, currency: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    >
-                      <option value="ARS">Peso Argentino (ARS)</option>
-                      <option value="USD">Dólar (USD)</option>
-                      <option value="EUR">Euro (EUR)</option>
-                      <option value="SOJ">Soja (SOJ)</option>
-                    </select>
-                  </div>
-
-                  {['amount', 'periods', 'rate'].map((field) => (
-                    <div key={field}>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {field === 'amount' ? 'Capital *' : 
-                         field === 'periods' ? 'Períodos *' : 'TNA (%) *'}
-                      </label>
-                      <input
-                        type="number"
-                        value={loanData[field]}
-                        onChange={(e) => setLoanData({...loanData, [field]: e.target.value})}
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                          errors[field] ? 'border-red-300' : 'border-gray-300'
-                        }`}
-                        step="0.01"
-                      />
-                      {errors[field] && <p className="text-red-500 text-xs mt-1">{errors[field]}</p>}
-                    </div>
-                  ))}
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Sistema</label>
-                    <select
-                      value={loanData.system}
-                      onChange={(e) => setLoanData({...loanData, system: e.target.value, isGermanManual: false, gracePeriods: 0})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    >
-                      <option value="french">Francés</option>
-                      <option value="german">Alemán</option>
-                      <option value="american">Americano</option>
-                    </select>
-                  </div>
-
-                  {loanData.system === 'german' && (
-                    <>
-                      <div className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={loanData.isGermanManual}
-                          onChange={(e) => setLoanData({...loanData, isGermanManual: e.target.checked, gracePeriods: e.target.checked ? loanData.gracePeriods : 0})}
-                          className="mr-2"
-                        />
-                        <label className="text-sm text-gray-700">Manual</label>
-                      </div>
-
-                      {loanData.isGermanManual && (
-                        <button
-                          onClick={() => setShowGermanModal(true)}
-                          disabled={!loanData.periods || loanData.periods <= 0}
-                          className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-                        >
-                          Configurar Capitales
-                        </button>
-                      )}
-
-                      {loanData.isGermanManual && (
-                        <>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Períodos de gracia</label>
-                            <input
-                              type="number"
-                              value={loanData.gracePeriods}
-                              onChange={(e) => setLoanData({...loanData, gracePeriods: e.target.value})}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                              min="0"
-                            />
-                          </div>
-                          
-                          {loanData.gracePeriods > 0 && (
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de gracia</label>
-                              <select
-                                value={loanData.graceType}
-                                onChange={(e) => setLoanData({...loanData, graceType: e.target.value})}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                              >
-                                <option value="total">Total</option>
-                                <option value="partial">Parcial</option>
-                              </select>
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </>
-                  )}
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Frecuencia</label>
-                    <select
-                      value={loanData.frequency}
-                      onChange={(e) => setLoanData({...loanData, frequency: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    >
-                      <option value="monthly">Mensual</option>
-                      <option value="quarterly">Trimestral</option>
-                      <option value="semiannual">Semestral</option>
-                      <option value="annual">Anual</option>
-                    </select>
-                  </div>
-
-                  {['liquidationDate', 'firstPaymentDate'].map((field) => (
-                    <div key={field}>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {field === 'liquidationDate' ? 'Fecha liquidación *' : 'Fecha primera cuota *'}
-                      </label>
-                      <input
-                        type="date"
-                        value={loanData[field]}
-                        onChange={(e) => setLoanData({...loanData, [field]: e.target.value})}
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                          errors[field] ? 'border-red-300' : 'border-gray-300'
-                        }`}
-                      />
-                      {errors[field] && <p className="text-red-500 text-xs mt-1">{errors[field]}</p>}
-                    </div>
-                  ))}
-                  
-                  <div className="flex items-center">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Períodos de Gracia</label>
                     <input
-                      type="checkbox"
-                      checked={loanData.ivaEnabled}
-                      onChange={(e) => setLoanData({...loanData, ivaEnabled: e.target.checked})}
-                      className="mr-2"
+                      type="number"
+                      value={gracePeriods}
+                      onChange={(e) => setGracePeriods(parseInt(e.target.value) || 0)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      min="0"
                     />
-                    <label className="text-sm text-gray-700">IVA sobre intereses</label>
                   </div>
-                  
-                  {loanData.ivaEnabled && (
+
+                  {gracePeriods > 0 && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Alícuota IVA (%)</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Gracia</label>
                       <select
-                        value={loanData.ivaRate}
-                        onChange={(e) => setLoanData({...loanData, ivaRate: parseFloat(e.target.value)})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        value={graceType}
+                        onChange={(e) => setGraceType(e.target.value)}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       >
-                        <option value={10.5}>10.5%</option>
-                        <option value={21}>21%</option>
+                        <option value="total">Total (no paga capital ni interés)</option>
+                        <option value="parcial">Parcial (solo paga interés)</option>
                       </select>
                     </div>
                   )}
-                </div>
+                </>
+              )}
+
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={hasIVA}
+                  onChange={(e) => setHasIVA(e.target.checked)}
+                  className="w-4 h-4"
+                />
+                <label className="text-sm font-medium text-gray-700">Aplicar IVA sobre intereses</label>
               </div>
 
-              {/* Botones */}
-              <div className="space-y-3">
-                <button onClick={calculateSchedule} className="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700">
-                  <Calculator className="h-4 w-4 inline mr-2" />
-                  Calcular
-                </button>
-                
-                <button onClick={clearData} className="w-full bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700">
-                  Limpiar
-                </button>
-
-                <div className="flex gap-2">
-                  <button onClick={saveSimulation} disabled={schedule.length === 0} className="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 disabled:opacity-50">
-                    <Save className="h-4 w-4 inline mr-2" />
-                    Guardar
-                  </button>
-                  
-                  <button onClick={exportToCSV} disabled={schedule.length === 0} className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50">
-                    <Download className="h-4 w-4 inline mr-2" />
-                    CSV
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Resultados */}
-          <div className="lg:col-span-2">
-            {schedule.length > 0 && (
-              <div className="bg-white rounded-lg shadow p-6 mb-6">
-                <h2 className="text-lg font-semibold mb-4">Resumen</h2>
-                <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-                  <div className="text-center p-4 bg-blue-50 rounded-lg">
-                    <div className="text-xl font-bold text-blue-600">{getCurrencySymbol(loanData.currency)}{formatNumber(loanData.amount)}</div>
-                    <div className="text-sm text-gray-600">Capital</div>
-                  </div>
-                  <div className="text-center p-4 bg-green-50 rounded-lg">
-                    <div className="text-xl font-bold text-green-600">{loanData.rate}%</div>
-                    <div className="text-sm text-gray-600">TNA</div>
-                  </div>
-                  <div className="text-center p-4 bg-purple-50 rounded-lg">
-                    <div className="text-xl font-bold text-purple-600">{loanData.periods}</div>
-                    <div className="text-sm text-gray-600">Plazo</div>
-                  </div>
-                  <div className="text-center p-4 bg-yellow-50 rounded-lg">
-                    <div className="text-lg font-bold text-yellow-600">
-                      {loanData.system === 'french' ? 'Francés' : loanData.system === 'german' ? 'Alemán' : 'Americano'}
-                    </div>
-                    <div className="text-sm text-gray-600">Sistema</div>
-                  </div>
-                  <div className="text-center p-4 bg-indigo-50 rounded-lg">
-                    <div className="text-lg font-bold text-indigo-600">
-                      {loanData.frequency === 'monthly' ? 'Mensual' : loanData.frequency === 'quarterly' ? 'Trimestral' : loanData.frequency === 'semiannual' ? 'Semestral' : 'Anual'}
-                    </div>
-                    <div className="text-sm text-gray-600">Periodicidad</div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="bg-white rounded-lg shadow">
-              <div className="p-6 border-b border-gray-200">
-                <h2 className="text-lg font-semibold">Cronograma de Pagos</h2>
-              </div>
-              
-              {schedule.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cuota</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vencimiento</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Días</th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Capital</th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Interés</th>
-                        {loanData.ivaEnabled && <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">IVA</th>}
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Saldo</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {schedule.map((row, index) => (
-                        <tr key={index} className={`${
-                          loanData.system === 'german' && loanData.isGermanManual && index < parseInt(loanData.gracePeriods) ? 'bg-yellow-50' : 
-                          index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
-                        }`}>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {row.period}
-                            {loanData.system === 'german' && loanData.isGermanManual && index < parseInt(loanData.gracePeriods) && (
-                              <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                Gracia
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{row.date.toLocaleDateString('es-AR')}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{row.days}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">{formatNumber(row.principalPayment)}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">{formatNumber(row.interestPayment)}</td>
-                          {loanData.ivaEnabled && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">{formatNumber(row.ivaAmount)}</td>}
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 text-right">{formatNumber(row.totalPayment)}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">{formatNumber(row.balance)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="p-12 text-center">
-                  <Calculator className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No hay cronograma calculado</h3>
-                  <p className="text-gray-500">Complete los datos y haga clic en "Calcular"</p>
+              {hasIVA && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Tasa de IVA (%)</label>
+                  <select
+                    value={ivaRate}
+                    onChange={(e) => setIvaRate(parseFloat(e.target.value))}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="10.5">10.5%</option>
+                    <option value="21">21%</option>
+                  </select>
                 </div>
               )}
             </div>
           </div>
         </div>
-      </div>
 
-      <GermanManualModal />
+        {/* Botones de acción */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={calculateSchedule}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            >
+              🧮 Calcular Cronograma
+            </button>
+
+            {schedule.length > 0 && (
+              <>
+                <button
+                  onClick={exportToCSV}
+                  className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                >
+                  📊 Exportar CSV
+                </button>
+
+                <button
+                  onClick={exportToPDF}
+                  className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                >
+                  📄 Exportar PDF
+                </button>
+
+                <button
+                  onClick={saveSimulation}
+                  className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                >
+                  💾 Guardar
+                </button>
+              </>
+            )}
+
+            <button
+              onClick={() => setShowHistory(!showHistory)}
+              className="px-6 py-3 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors font-medium"
+            >
+              📚 Historial
+            </button>
+
+            <button
+              onClick={clearData}
+              className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
+            >
+              🗑️ Limpiar Datos
+            </button>
+          </div>
+        </div>
+
+        {/* Resumen */}
+        {summary && (
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">📊 Resumen Financiero</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <p className="text-sm text-gray-600">Capital Total</p>
+                <p className="text-lg font-bold text-gray-800">{getCurrencySymbol(currency)} {formatNumber(summary.totalCapital)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Intereses Totales</p>
+                <p className="text-lg font-bold text-blue-600">{getCurrencySymbol(currency)} {formatNumber(summary.totalInterest)}</p>
+              </div>
+              {summary.totalIVA > 0 && (
+                <div>
+                  <p className="text-sm text-gray-600">IVA Total</p>
+                  <p className="text-lg font-bold text-orange-600">{getCurrencySymbol(currency)} {formatNumber(summary.totalIVA)}</p>
+                </div>
+              )}
+              <div>
+                <p className="text-sm text-gray-600">Total a Pagar</p>
+                <p className="text-lg font-bold text-green-600">{getCurrencySymbol(currency)} {formatNumber(summary.totalAmount)}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Cronograma */}
+        {schedule.length > 0 && (
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">📅 Cronograma de Pagos</h2>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="p-3 text-left">Cuota</th>
+                    <th className="p-3 text-left">Vencimiento</th>
+                    <th className="p-3 text-right">Días</th>
+                    <th className="p-3 text-right">Capital</th>
+                    <th className="p-3 text-right">Interés</th>
+                    {hasIVA && <th className="p-3 text-right">IVA</th>}
+                    <th className="p-3 text-right">Cuota Total</th>
+                    <th className="p-3 text-right">Saldo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {schedule.map((row, index) => (
+                    <tr 
+                      key={index} 
+                      className={`border-b ${row.isGrace ? 'bg-yellow-50' : ''}`}
+                    >
+                      <td className="p-3">
+                        {row.period}
+                        {row.isGrace && <span className="ml-2 text-xs text-yellow-600">(Gracia)</span>}
+                      </td>
+                      <td className="p-3">{row.date}</td>
+                      <td className="p-3 text-right">{row.days}</td>
+                      <td className="p-3 text-right">{formatNumber(row.capital)}</td>
+                      <td className="p-3 text-right">{formatNumber(row.interest)}</td>
+                      {hasIVA && <td className="p-3 text-right">{formatNumber(row.iva)}</td>}
+                      <td className="p-3 text-right font-medium">{formatNumber(row.total)}</td>
+                      <td className="p-3 text-right text-gray-600">{formatNumber(row.balance)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Historial */}
+        {showHistory && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg shadow-xl p-6 max-w-4xl w-full max-h-[80vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-gray-800">📚 Simulaciones Guardadas</h2>
+                <button
+                  onClick={() => setShowHistory(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {savedSimulations.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">No hay simulaciones guardadas</p>
+              ) : (
+                <div className="space-y-4">
+                  {savedSimulations.map((sim) => (
+                    <div key={sim.id} className="border rounded-lg p-4 hover:bg-gray-50">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="font-bold text-gray-800">{sim.name}</h3>
+                          <p className="text-sm text-gray-600">
+                            {sim.clientName || 'Sin cliente'} | {getCurrencySymbol(sim.currency)} {formatNumber(parseFloat(sim.capital))} | {sim.periods} períodos
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {new Date(sim.date).toLocaleDateString('es-AR')}
+                          </p>
+                        </div>
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => loadSimulation(sim)}
+                            className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
+                          >
+                            Cargar
+                          </button>
+                          <button
+                            onClick={() => deleteSimulation(sim.id)}
+                            className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                          >
+                            Eliminar
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Modal Sistema Manual */}
+        {showManualModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+              <h2 className="text-xl font-bold text-gray-800 mb-4">Configuración Manual de Capitales</h2>
+              
+              <div className="mb-4">
+                <button
+                  onClick={distributeEvenly}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Distribuir Parejo
+                </button>
+              </div>
+
+              <div className="space-y-2 mb-4 max-h-96 overflow-y-auto">
+                {manualCapitals.map((cap, index) => (
+                  <div key={index} className="flex items-center space-x-4">
+                    <span className="w-20 text-sm font-medium">Cuota {index + 1}:</span>
+                    <input
+                      type="number"
+                      value={cap}
+                      onChange={(e) => updateManualCapital(index, e.target.value)}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg"
+                      disabled={index < gracePeriods}
+                    />
+                    {index < gracePeriods && (
+                      <span className="text-xs text-yellow-600">(Período de gracia)</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="mb-4 p-3 bg-gray-50 rounded">
+                <p className="text-sm">
+                  <strong>Total asignado:</strong> {formatNumber(manualCapitals.reduce((sum, val) => sum + val, 0))}
+                </p>
+                <p className="text-sm">
+                  <strong>Capital del préstamo:</strong> {formatNumber(parseFloat(capital))}
+                </p>
+              </div>
+
+              <div className="flex space-x-3">
+                <button
+                  onClick={saveManualCapitals}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                >
+                  Guardar
+                </button>
+                <button
+                  onClick={() => setShowManualModal(false)}
+                  className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
-};
-
-// Componente principal
-const App = () => {
-  return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
-  );
-};
-
-const AppContent = () => {
-  const { user } = useAuth();
-  return user ? <SimulatorApp /> : <LoginForm />;
-};
+}
 
 export default App;
