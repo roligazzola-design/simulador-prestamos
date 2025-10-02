@@ -1,12 +1,14 @@
 {
   "name": "simulador-prestamos",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-scripts": "5.0.1",
-    "lucide-react": "^0.263.1"
+    "lucide-react": "^0.263.1",
+    "jspdf": "^2.5.1",
+    "jspdf-autotable": "^3.5.31"
   },
   "scripts": {
     "start": "react-scripts start",
