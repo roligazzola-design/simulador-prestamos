@@ -821,15 +821,20 @@ function App() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Sistema de Amortización *</label>
-                <select
-                  value={system}
-                  onChange={(e) => {
-                    setSystem(e.target.value);
-                    setIsManual(false);
-                    setGracePeriods(0);
-                  }}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                >
+<select
+  value={system}
+  onChange={(e) => {
+    const newSystem = e.target.value;
+    setSystem(newSystem);
+    setIsManual(false);
+    setGracePeriods(0);
+    // Si cambia a Francés, forzar periodicidad mensual
+    if (newSystem === 'frances') {
+      setPeriodicity('mensual');
+    }
+  }}
+  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2"
+>
                   <option value="frances">Francés</option>
                   <option value="aleman">Alemán</option>
                   <option value="americano">Americano</option>
@@ -861,20 +866,30 @@ function App() {
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Periodicidad</label>
-                <select
-                  value={periodicity}
-                  onChange={(e) => setPeriodicity(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="mensual">Mensual</option>
-                  <option value="bimestral">Bimestral</option>
-                  <option value="trimestral">Trimestral</option>
-                  <option value="cuatrimestral">Cuatrimestral</option>
-                  <option value="semestral">Semestral</option>
-                  <option value="anual">Anual</option>
-                </select>
-              </div>
+  <label className="block text-sm font-medium text-gray-700 mb-2">Periodicidad</label>
+  <select
+    value={periodicity}
+    onChange={(e) => setPeriodicity(e.target.value)}
+    disabled={system === 'frances'}
+    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${
+      system === 'frances' 
+        ? 'bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed' 
+        : 'border-gray-300'
+    }`}
+  >
+    <option value="mensual">Mensual</option>
+    <option value="bimestral">Bimestral</option>
+    <option value="trimestral">Trimestral</option>
+    <option value="cuatrimestral">Cuatrimestral</option>
+    <option value="semestral">Semestral</option>
+    <option value="anual">Anual</option>
+  </select>
+  {system === 'frances' && (
+    <p className="text-xs text-gray-500 mt-1">
+      ℹ️ Sistema Francés solo admite periodicidad mensual
+    </p>
+  )}
+</div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Fecha de Liquidación *</label>
@@ -1218,3 +1233,4 @@ function App() {
 }
 
 export default App;
+
